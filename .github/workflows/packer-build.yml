@@ -23,12 +23,12 @@ env:
 jobs:
   verify_packer:
     name: Verify packer
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     container:
       image: index.docker.io/hashicorp/packer@sha256:12c441b8a3994e7df9f0e2692d9298f14c387e70bcc06139420977dbf80a137b # 1.11.2
     strategy:
       matrix:
-        image: ["linux-al2023", "windows-core-2019", "windows-core-2022", "ubuntu-focal", "ubuntu-jammy", "ubuntu-jammy-arm64"]
+        image: ["ubuntu-general", "ubuntu-terraform"]
     defaults:
       run:
         working-directory: images/${{ matrix.image }}

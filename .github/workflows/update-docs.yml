@@ -1,3 +1,4 @@
+# DISABLED: Upstream workflow not needed for private fork. Remove 'if: false' from jobs to re-enable.
 name: Update docs
 on:
   push:
@@ -15,8 +16,9 @@ permissions:
 
 jobs:
   docs:
+    if: false
     name: Auto update terraform docs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     permissions:
       contents: write # for terraform-docs/gh-actions to commit documentation updates
       pull-requests: write # for peter-evans/create-pull-request to create PRs with doc updates
@@ -65,9 +67,10 @@ jobs:
           delete-branch: true
 
   deploy-pages:
+    if: false
     name: Deploy documentation to GitHub Pages
     needs: [docs]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     permissions:
       contents: write # for actions/checkout and mkdocs gh-deploy to push to gh-pages branch
     steps:

@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'lambdas/**'
-      - '.github/workflows/lambda.yml'
+      - "lambdas/**"
+      - ".github/workflows/lambda.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     name: Build and test lambda functions
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     container:
       image: node:24@sha256:aa648b387728c25f81ff811799bbf8de39df66d7e2d9b3ab55cc6300cb9175d9
     defaults:

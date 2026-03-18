@@ -1,3 +1,4 @@
+# DISABLED: Upstream workflow not needed for private fork. Remove 'if: false' from jobs to re-enable.
 name: Release build
 on:
   push:
@@ -14,8 +15,9 @@ permissions:
 
 jobs:
   release:
+    if: false
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     permissions:
       contents: write # for release-please-action to create releases and update changelogs
       actions: write # for release-please-action to trigger other workflows
@@ -60,7 +62,7 @@ jobs:
         id: attest
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-path: '${{ github.workspace }}/lambdas/functions/**/*.zip'
+          subject-path: "${{ github.workspace }}/lambdas/functions/**/*.zip"
       - name: Update release notes with attestation
         if: ${{ steps.release.outputs.releases_created == 'true' }}
         env:

@@ -179,37 +179,37 @@ describe('Dispatcher', () => {
 
   describe('decides can run job based on label and config (canRunJob)', () => {
     it('should accept job with an exact match and identical labels.', () => {
-      const workflowLabels = ['self-hosted', 'linux', 'x64', 'ubuntu-latest'];
-      const runnerLabels = [['self-hosted', 'linux', 'x64', 'ubuntu-latest']];
+      const workflowLabels = ['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]'];
+      const runnerLabels = [['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]']];
       expect(canRunJob(workflowLabels, runnerLabels, true)).toBe(true);
     });
 
     it('should accept job with an exact match and identical labels, ignoring cases.', () => {
-      const workflowLabels = ['self-Hosted', 'Linux', 'X64', 'ubuntu-Latest'];
-      const runnerLabels = [['self-hosted', 'linux', 'x64', 'ubuntu-latest']];
+      const workflowLabels = ['self-Hosted', 'Linux', 'X64', '[self-hosted, linux, x64, ubuntu-terraform]'];
+      const runnerLabels = [['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]']];
       expect(canRunJob(workflowLabels, runnerLabels, true)).toBe(true);
     });
 
     it('should accept job with an exact match and runner supports requested capabilities.', () => {
       const workflowLabels = ['self-hosted', 'linux', 'x64'];
-      const runnerLabels = [['self-hosted', 'linux', 'x64', 'ubuntu-latest']];
+      const runnerLabels = [['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]']];
       expect(canRunJob(workflowLabels, runnerLabels, true)).toBe(true);
     });
 
     it('should NOT accept job with an exact match and runner not matching requested capabilities.', () => {
-      const workflowLabels = ['self-hosted', 'linux', 'x64', 'ubuntu-latest'];
+      const workflowLabels = ['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]'];
       const runnerLabels = [['self-hosted', 'linux', 'x64']];
       expect(canRunJob(workflowLabels, runnerLabels, true)).toBe(false);
     });
 
     it('should accept job with for a non exact match. Any label that matches will accept the job.', () => {
-      const workflowLabels = ['self-hosted', 'linux', 'x64', 'ubuntu-latest', 'gpu'];
+      const workflowLabels = ['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]', 'gpu'];
       const runnerLabels = [['gpu']];
       expect(canRunJob(workflowLabels, runnerLabels, false)).toBe(true);
     });
 
     it('should NOT accept job with for an exact match. Not all requested capabilities are supported.', () => {
-      const workflowLabels = ['self-hosted', 'linux', 'x64', 'ubuntu-latest', 'gpu'];
+      const workflowLabels = ['self-hosted', 'linux', 'x64', '[self-hosted, linux, x64, ubuntu-terraform]', 'gpu'];
       const runnerLabels = [['gpu']];
       expect(canRunJob(workflowLabels, runnerLabels, true)).toBe(false);
     });

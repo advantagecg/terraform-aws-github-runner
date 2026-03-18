@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         terraform: ["1.5.6", "latest"]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     container:
       image: hashicorp/terraform:${{ matrix.terraform }}
     steps:
@@ -95,7 +95,7 @@ jobs:
     defaults:
       run:
         working-directory: modules/${{ matrix.module }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     container:
       image: hashicorp/terraform:${{ matrix.terraform }}
     steps:
@@ -155,12 +155,12 @@ jobs:
             "ephemeral",
             "termination-watcher",
             "multi-runner",
-            "external-managed-ssm-secrets"
+            "external-managed-ssm-secrets",
           ]
     defaults:
       run:
         working-directory: examples/${{ matrix.example }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     container:
       image: hashicorp/terraform:${{ matrix.terraform }}
     steps:
