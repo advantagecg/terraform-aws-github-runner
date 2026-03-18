@@ -1,3 +1,4 @@
+# DISABLED: Upstream workflow not needed for private fork. Remove 'if: false' from jobs to re-enable.
 name: "Semantic Check"
 on:
   pull_request_target:
@@ -15,6 +16,7 @@ permissions:
   pull-requests: read # for amannn/action-semantic-pull-request to check PR details
 jobs:
   main:
+    if: false
     name: Semantic Commit Message Check
     runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     steps:

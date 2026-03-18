@@ -94,7 +94,7 @@ module "runners" {
       fifo = true
       redrive_build_queue = {
         enabled         = true
-        maxReceiveCount = 3
+        maxReceiveCount = 10
       }
       runner_config = {
         runner_os           = "linux"
@@ -108,7 +108,7 @@ module "runners" {
         enable_jit_config           = true
         enable_job_queued_check     = false
 
-        runners_maximum_count = 10
+        runners_maximum_count = 25
 
         # Allow up to 10 concurrent scale-up Lambda invocations (default is 1, which serializes job processing)
         scale_up_reserved_concurrent_executions = 10
@@ -172,7 +172,7 @@ module "runners" {
       fifo = true
       redrive_build_queue = {
         enabled         = true
-        maxReceiveCount = 3
+        maxReceiveCount = 10
       }
       runner_config = {
         runner_os           = "linux"
@@ -186,7 +186,7 @@ module "runners" {
         enable_jit_config           = true
         enable_job_queued_check     = false
 
-        runners_maximum_count = 10
+        runners_maximum_count = 25
 
         # Allow up to 10 concurrent scale-up Lambda invocations
         scale_up_reserved_concurrent_executions = 10

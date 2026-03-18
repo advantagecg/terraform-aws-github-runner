@@ -1,3 +1,4 @@
+# DISABLED: Upstream workflow not needed for private fork. Remove 'if: false' from jobs to re-enable.
 # Dependency Review Action
 #
 # This Action will scan dependency manifest files that change as part of a Pull Request,
@@ -17,6 +18,7 @@ permissions: {}
 
 jobs:
   dependency-review:
+    if: false
     name: Dependency vulnerability scan
     runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     permissions:

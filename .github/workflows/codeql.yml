@@ -1,3 +1,4 @@
+# DISABLED: Upstream workflow not needed for private fork. Remove 'if: false' from jobs to re-enable.
 name: "CodeQL Advanced"
 
 on:
@@ -19,6 +20,7 @@ permissions:
 
 jobs:
   analyze:
+    if: false
     name: Analyze (${{ matrix.language }})
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || '[self-hosted, linux, x64, ubuntu-terraform]' }}
     permissions:
