@@ -1,41 +1,101 @@
 # Prebuilt Images
 
-> :warning: These images are provided as an example/
+Pre-built Ubuntu 22.04 AMIs designed for ephemeral, single-job GitHub Actions runners. Using a pre-built image reduces runner startup time significantly compared to the user-data bootstrap path.
 
-The images inside this folder are pre-built images designed to shorten the boot time of your runners and make using ephemeral runners a faster experience.
+Both images share the same runner install/start scripts used by the user-data mechanism in `/modules/runners/templates/`, injected at build time via Packer's `templatefile()`.
 
-These images share the same scripting as used in the user-data mechanism in `/modules/runners/templates/`. We use a `templatefile` mechanism to insert the relevant script fragments into the scripts used for provisioning the images.
+---
 
-The examples in `linux-al2023` and `windows-core-2019` also upload a `start-runner` script that uses the exact same startup process as used in the user-data mechanism. This means that the image created here does not need any extra scripts injected or changes to boot up and connect to GH.
+## Available Images
 
-To remove old images the [AMI house keeper module](https://github-aws-runners.github.io/terraform-aws-github-runner/modules/public/ami-housekeeper/) can be used.
+### `ubuntu-general`
 
-## Building your own
+General-purpose CI/CD runner for AWS workloads.
 
-To build these images you first need to install packer.
-You will also need an amazon account and to have provisioned your credentials for packer to consume.
+| Tool | Details |
+|---|---|
+| OS | Ubuntu 22.04 LTS (Jammy) x86_64 |
+| Docker CE | Latest stable from official Docker repo |
+| AWS CLI v2 | Latest |
+| Amazon CloudWatch agent | Latest |
+| Node.js | LTS (via NodeSource) |
+| Python 3 | + pip + venv |
+| Common tools | git, curl, wget, jq, unzip, make, build-essential |
 
-Assuming you are building the `linux-al2023` image. Then run the following from within the `linux-al2023` folder
+### `ubuntu-terraform`
+
+Terraform/IaC CI/CD runner. Includes everything in `ubuntu-general` plus:
+
+| Tool | Details |
+|---|---|
+| Terraform | Latest (managed via tfenv) |
+| tfenv | Terraform version manager |
+| Terragrunt | Latest |
+| tflint | Latest |
+| terraform-docs | Latest |
+| Checkov | Latest (via pip) |
+| infracost | Latest |
+
+---
+
+## Prerequisites
+
+- [Packer](https://developer.hashicorp.com/packer/install) installed (`brew install packer`)
+- AWS credentials configured for the target account
+- AWS profile set up in `~/.aws/config`
+
+---
+
+## Building Images
+
+All Packer commands are available from the **repo root** via `make`. The default AWS profile is `acg-main`.
 
 ```bash
-packer init .
-packer validate .
-packer build github_agent.linux.pkr.hcl
+# Initialise plugins (required once per machine)
+make packer-init COMPONENT=ubuntu-general
+
+# Validate configuration (dry-run, no AWS resources created)
+make packer-validate COMPONENT=ubuntu-general
+
+# Build the AMI
+make packer-build COMPONENT=ubuntu-general
+
+# Full pipeline: init → fmt-check → validate → build
+make packer-all COMPONENT=ubuntu-general
 ```
 
-Your image will then begin to build inside AWS and when finished you will be provided with complete AMI.
+To use a different AWS profile:
 
-## Using your image
+```bash
+make packer-build COMPONENT=ubuntu-general AWS_PROFILE=my-other-profile
+```
 
-To use your image in the terraform modules you will need to set some values on the module.
+Replace `ubuntu-general` with `ubuntu-terraform` for the Terraform image.
 
-Assuming you have built the `linux-al2023` image which has a pre-defined AMI name in the following format `github-runner-al2023-x86_64-YYYYMMDDhhmm` you can use the following values.
+---
 
+## Using a Pre-built Image in Terraform
+
+After a successful build, Packer outputs the AMI ID in `images/<component>/manifest.json`. Reference it in your runner module config:
+
+**ubuntu-general:**
 ```hcl
-# set the name of the ami to use
-ami_filter        = { name = ["github-runner-al2023-x86_64-2023*"] }
-# provide the owner id of
-ami_owners        = ["<your owner id>"]
-
+ami_filter      = { name = ["github-runner-ubuntu-general-x86_64-*"] }
+ami_owners      = ["<your-aws-account-id>"]
 enable_userdata = false
 ```
+
+**ubuntu-terraform:**
+```hcl
+ami_filter      = { name = ["github-runner-ubuntu-terraform-x86_64-*"] }
+ami_owners      = ["<your-aws-account-id>"]
+enable_userdata = false
+```
+
+Set `enable_userdata = false` so the module skips its bootstrap script — the AMI already has the runner pre-installed and the start script placed in `/var/lib/cloud/scripts/per-boot/`.
+
+---
+
+## AMI Cleanup
+
+Old AMIs can be automatically deregistered using the [AMI housekeeper module](https://github-aws-runners.github.io/terraform-aws-github-runner/modules/public/ami-housekeeper/).

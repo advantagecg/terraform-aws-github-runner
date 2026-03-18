@@ -7,102 +7,8 @@ packer {
   }
 }
 
-variable "runner_version" {
-  description = "The version (no v prefix) of the runner software to install https://github.com/actions/runner/releases. The latest release will be fetched from GitHub if not provided."
-  default     = null
-}
-
-variable "region" {
-  description = "The region to build the image in"
-  type        = string
-  default     = "eu-west-1"
-}
-
-variable "security_group_id" {
-  description = "The ID of the security group Packer will associate with the builder to enable access"
-  type        = string
-  default     = null
-}
-
-variable "subnet_id" {
-  description = "If using VPC, the ID of the subnet, such as subnet-12345def, where Packer will launch the EC2 instance. This field is required if you are using an non-default VPC"
-  type        = string
-  default     = null
-}
-
-variable "associate_public_ip_address" {
-  description = "If using a non-default VPC, there is no public IP address assigned to the EC2 instance. If you specified a public subnet, you probably want to set this to true. Otherwise the EC2 instance won't have access to the internet"
-  type        = string
-  default     = null
-}
-
-variable "instance_type" {
-  description = "The instance type Packer will use for the builder"
-  type        = string
-  default     = "t3.medium"
-}
-
-variable "iam_instance_profile" {
-  description = "IAM instance profile Packer will use for the builder. An empty string (default) means no profile will be assigned."
-  type        = string
-  default     = ""
-}
-
-variable "root_volume_size_gb" {
-  type    = number
-  default = 8
-}
-
-variable "ebs_delete_on_termination" {
-  description = "Indicates whether the EBS volume is deleted on instance termination."
-  type        = bool
-  default     = true
-}
-
-variable "global_tags" {
-  description = "Tags to apply to everything"
-  type        = map(string)
-  default     = {}
-}
-
-variable "ami_tags" {
-  description = "Tags to apply to the AMI"
-  type        = map(string)
-  default     = {}
-}
-
-variable "snapshot_tags" {
-  description = "Tags to apply to the snapshot"
-  type        = map(string)
-  default     = {}
-}
-
-variable "custom_shell_commands" {
-  description = "Additional commands to run on the EC2 instance, to customize the instance, like installing packages"
-  type        = list(string)
-  default     = []
-}
-
-variable "temporary_security_group_source_public_ip" {
-  description = "When enabled, use public IP of the host (obtained from https://checkip.amazonaws.com) as CIDR block to be authorized access to the instance, when packer is creating a temporary security group. Note: If you specify `security_group_id` then this input is ignored."
-  type        = bool
-  default     = false
-}
-
-data "http" github_runner_release_json {
-  url = "https://api.github.com/repos/actions/runner/releases/latest"
-  request_headers = {
-    Accept = "application/vnd.github+json"
-    X-GitHub-Api-Version : "2022-11-28"
-  }
-}
-
-locals {
-  runner_version = coalesce(var.runner_version, trimprefix(jsondecode(data.http.github_runner_release_json.body).tag_name, "v"))
-}
-
 source "amazon-ebs" "githubrunner" {
-  ami_name                                  = "github-runner-ubuntu-jammy-amd64-${formatdate("YYYYMMDDhhmm", timestamp())}"
+  ami_name                                  = "github-runner-ubuntu-terraform-x86_64-${formatdate("YYYYMMDDhhmm", timestamp())}"
   instance_type                             = var.instance_type
   iam_instance_profile                      = var.iam_instance_profile
   region                                    = var.region
@@ -125,7 +31,7 @@ source "amazon-ebs" "githubrunner" {
     var.global_tags,
     var.ami_tags,
     {
-      OS_Version    = "ubuntu-jammy"
+      OS_Version    = "ubuntu-terraform"
       Release       = "Latest"
       Base_AMI_Name = "{{ .SourceAMIName }}"
   })
@@ -136,9 +42,9 @@ source "amazon-ebs" "githubrunner" {
 
   launch_block_device_mappings {
     device_name           = "/dev/sda1"
-    volume_size           = "${var.root_volume_size_gb}"
+    volume_size           = var.root_volume_size_gb
     volume_type           = "gp3"
-    delete_on_termination = "${var.ebs_delete_on_termination}"
+    delete_on_termination = var.ebs_delete_on_termination
   }
 }
 
@@ -147,27 +53,78 @@ build {
   sources = [
     "source.amazon-ebs.githubrunner"
   ]
+
   provisioner "shell" {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive"
     ]
     inline = concat([
+      # Wait for cloud-init to finish before touching apt
       "sudo cloud-init status --wait",
+
+      # Base system update
       "sudo apt-get -y update",
+      "sudo apt-get -y upgrade",
       "sudo apt-get -y install ca-certificates curl gnupg lsb-release",
+
+      # Docker CE (official Docker repo)
       "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
       "echo deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
       "sudo apt-get -y update",
-      "sudo apt-get -y install docker-ce docker-ce-cli containerd.io jq git unzip",
+      "sudo apt-get -y install docker-ce docker-ce-cli containerd.io",
       "sudo systemctl enable containerd.service",
       "sudo service docker start",
       "sudo usermod -a -G docker ubuntu",
-      "sudo curl -f https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -o amazon-cloudwatch-agent.deb",
-      "sudo dpkg -i amazon-cloudwatch-agent.deb",
-      "sudo systemctl restart amazon-cloudwatch-agent",
+
+      # Common DevOps tools
+      "sudo apt-get -y install git curl wget jq unzip make build-essential",
+
+      # AWS CLI v2
       "sudo curl -f https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip",
       "unzip awscliv2.zip",
       "sudo ./aws/install",
+      "rm -rf awscliv2.zip aws",
+
+      # Amazon CloudWatch agent
+      "sudo curl -f https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -o amazon-cloudwatch-agent.deb",
+      "sudo dpkg -i amazon-cloudwatch-agent.deb",
+      "rm -f amazon-cloudwatch-agent.deb",
+
+      # Node.js LTS (via NodeSource)
+      "curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -",
+      "sudo apt-get -y install nodejs",
+
+      # Python 3 + pip + virtualenv
+      "sudo apt-get -y install python3 python3-pip python3-venv",
+
+      # tfenv + Terraform (latest)
+      "git clone --depth=1 https://github.com/tfutils/tfenv.git /home/ubuntu/.tfenv",
+      "sudo ln -s /home/ubuntu/.tfenv/bin/tfenv /usr/local/bin/tfenv",
+      "sudo ln -s /home/ubuntu/.tfenv/bin/terraform /usr/local/bin/terraform",
+      "tfenv install latest",
+      "tfenv use latest",
+
+      # Terragrunt (latest)
+      "TERRAGRUNT_VERSION=$(curl -s https://api.github.com/repos/gruntwork-io/terragrunt/releases/latest | jq -r '.tag_name')",
+      "sudo curl -fsSL https://github.com/gruntwork-io/terragrunt/releases/download/$${TERRAGRUNT_VERSION}/terragrunt_linux_amd64 -o /usr/local/bin/terragrunt",
+      "sudo chmod +x /usr/local/bin/terragrunt",
+
+      # tflint (latest)
+      "curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | sudo bash",
+
+      # terraform-docs (latest)
+      "TFDOCS_VERSION=$(curl -s https://api.github.com/repos/terraform-docs/terraform-docs/releases/latest | jq -r '.tag_name')",
+      "sudo curl -fsSL https://github.com/terraform-docs/terraform-docs/releases/download/$${TFDOCS_VERSION}/terraform-docs-$${TFDOCS_VERSION}-linux-amd64.tar.gz -o terraform-docs.tar.gz",
+      "tar -xzf terraform-docs.tar.gz terraform-docs",
+      "sudo mv terraform-docs /usr/local/bin/terraform-docs",
+      "sudo chmod +x /usr/local/bin/terraform-docs",
+      "rm -f terraform-docs.tar.gz",
+
+      # Checkov (IaC security scanner)
+      "sudo pip3 install checkov",
+
+      # infracost (cost estimation)
+      "curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sudo sh",
     ], var.custom_shell_commands)
   }
 
