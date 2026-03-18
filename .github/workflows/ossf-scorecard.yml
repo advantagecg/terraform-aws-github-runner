@@ -2,10 +2,10 @@ name: OSSF Scorecard supply-chain security
 on:
   branch_protection_rule:
   schedule:
-    - cron: '44 19 * * 2'
+    - cron: "44 19 * * 2"
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -17,7 +17,7 @@ permissions:
 jobs:
   analysis:
     name: Scorecard analysis
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     if: github.event.repository.default_branch == github.ref_name || github.event_name == 'pull_request'
     permissions:
       security-events: write # for github/codeql-action/upload-sarif to upload security scan results

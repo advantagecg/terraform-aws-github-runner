@@ -3,12 +3,12 @@ name: GitHub Actions Security Analysis with zizmor 🌈
 on:
   push:
     paths:
-      - '.github/workflows/*.ya?ml'
+      - ".github/workflows/*.ya?ml"
     branches:
       - main
   pull_request:
     paths:
-      - '.github/workflows/*.ya?ml'
+      - ".github/workflows/*.ya?ml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,11 +19,11 @@ permissions: {}
 jobs:
   zizmor:
     name: Run zizmor 🌈
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, ubuntu-terraform]
     permissions:
       contents: read
-      actions: read           # to read actions in status in the repo
-      security-events: write  # to create security alerts
+      actions: read # to read actions in status in the repo
+      security-events: write # to create security alerts
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
